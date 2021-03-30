@@ -1,6 +1,14 @@
 import numpy as np
 import time
 
+CD_LOW = 0.12
+CD_HIGH = 0.32
+CD_STEP = 0.001
+
+CR_LOW = 0.005
+CR_HIGH = 0.015
+CR_STEP = 0.00005
+
 jerome_tt_data = {
 	38.9: 372,
 	38.4: 356,
@@ -71,11 +79,11 @@ def calculate_power(speed: float, mass: float, cd: float, cr: float) -> float:
 	return pd + pr
 
 
-def calculate_error(cd: float, cr: float, dataset: dict[float, int]) -> float:
+def calculate_error(cd: float, cr: float, mass: float, dataset: dict[float, int]) -> float:
 	total_error = 0
 	denominator = 0
 	for i in dataset:
-		calculated_power = calculate_power(i, 78 + 10, cd, cr)
+		calculated_power = calculate_power(i, mass, cd, cr)
 		error = (calculated_power - dataset[i]) ** 2
 		total_error += error
 		denominator += dataset[i] ** 2
@@ -84,13 +92,13 @@ def calculate_error(cd: float, cr: float, dataset: dict[float, int]) -> float:
 	return coef_error
 
 
-def calculate_best_coef(dataset: dict[float, int]) -> Results:
+def calculate_best_coef(mass: float, dataset: dict[float, int]) -> Results:
 	lowest_error = 1e10
 	cd_of_lowest = None
 	cr_of_lowest = None
-	for potential_cd in np.arange(0.12, 0.32, 0.001):
-		for potential_cr in np.arange(0.005, 0.015, 0.00005):
-			error = calculate_error(potential_cd, potential_cr, dataset)
+	for potential_cd in np.arange(CD_LOW, CD_HIGH, CD_STEP):
+		for potential_cr in np.arange(CR_LOW, CR_HIGH, CR_STEP):
+			error = calculate_error(potential_cd, potential_cr, mass, dataset)
 			if error < lowest_error:
 				lowest_error = error
 				cd_of_lowest = potential_cd
@@ -99,11 +107,11 @@ def calculate_best_coef(dataset: dict[float, int]) -> Results:
 	return Results(lowest_error, cd_of_lowest, cr_of_lowest)
 
 
-def calculate_best_coef_from_fixed_cr(dataset: dict[float, int], fixed_cr: float) -> Results:
+def calculate_best_coef_from_fixed_cr(mass, dataset: dict[float, int], fixed_cr: float) -> Results:
 	lowest_error = 1e10
 	cd_of_lowest = None
-	for potential_cd in np.arange(0.12, 0.32, 0.001):
-		error = calculate_error(potential_cd, fixed_cr, dataset)
+	for potential_cd in np.arange(CD_LOW, CD_HIGH, CD_STEP):
+		error = calculate_error(potential_cd, fixed_cr, mass, dataset)
 		if error < lowest_error:
 			lowest_error = error
 			cd_of_lowest = potential_cd
@@ -111,17 +119,17 @@ def calculate_best_coef_from_fixed_cr(dataset: dict[float, int], fixed_cr: float
 	return Results(lowest_error, cd_of_lowest, fixed_cr)
 
 
-def calculate_best_coef_from_multiple_datasets(datasets: list[dict[float, int]]) -> list[Results]:
+def calculate_best_coef_from_multiple_datasets(datasets: list[dict[float, int]], masses: list[float]) -> list[Results]:
 	lowest_total_error = 1e10
 	errors_of_lowest = []
 	cds_of_lowest = []
 	cr_of_lowest = None
-	for potential_cr in np.arange(0.005, 0.015, 0.00005):
+	for potential_cr in np.arange(CR_LOW, CR_HIGH, CR_STEP):
 		total_error = 0
 		current_errors = []
 		current_cds = []
-		for dataset in datasets:
-			result = calculate_best_coef_from_fixed_cr(dataset, potential_cr)
+		for mass, dataset in zip(masses, datasets):
+			result = calculate_best_coef_from_fixed_cr(mass, dataset, potential_cr)
 			total_error += result.error
 			current_cds.append(result.optimal_cd)
 			current_errors.append(result.error)
@@ -143,31 +151,35 @@ def print_results(results: Results) -> None:
 
 
 def main():
+	ALBAN_MASS = 60 + 10
+	JEROME_MASS = 78 + 10
+
 	start_time = time.time()
 	print("--- DYNAMIC CR REGRESSIONS ---")
 	print("--- Alban TT ---")
-	alban_tt = calculate_best_coef(alban_tt_data)
+	alban_tt = calculate_best_coef(ALBAN_MASS, alban_tt_data)
 	print_results(alban_tt)
 
 	print("--- Jerome TT ---")
-	jerome_tt = calculate_best_coef(jerome_tt_data)
+	jerome_tt = calculate_best_coef(JEROME_MASS, jerome_tt_data)
 	print_results(jerome_tt)
 
 	print("--- Alban RB ---")
-	alban_rb = calculate_best_coef(alban_rb_data)
+	alban_rb = calculate_best_coef(ALBAN_MASS, alban_rb_data)
 	print_results(alban_rb)
 
 	print("--- Jerome RB ---")
-	jerome_rb = calculate_best_coef(jerome_rb_data)
+	jerome_rb = calculate_best_coef(JEROME_MASS, jerome_rb_data)
 	print_results(jerome_rb)
 
 	print("--- Alban PK ---")
-	alban_pack = calculate_best_coef(alban_pack_data)
+	alban_pack = calculate_best_coef(ALBAN_MASS, alban_pack_data)
 	print_results(alban_pack)
 
 	print("--- STATIC CR REGRESSIONS ---")
 	datasets = [alban_tt_data, jerome_tt_data, alban_rb_data, jerome_rb_data, alban_pack_data]
-	results = calculate_best_coef_from_multiple_datasets(datasets)
+	masses = [ALBAN_MASS, JEROME_MASS, ALBAN_MASS, JEROME_MASS, ALBAN_MASS]
+	results = calculate_best_coef_from_multiple_datasets(datasets, masses)
 	labels = ["--- Alban TT ---", "--- Jerome TT ---", "--- Alban RB ---", "--- Jerome RB ---", "--- Alban PK ---"]
 	for label, result in zip(labels, results):
 		print(label)
