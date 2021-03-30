@@ -66,8 +66,8 @@ class Results:
 
 def calculate_power(speed: float, mass: float, cd: float, cr: float) -> float:
 	pd = cd * (speed / 3.6) ** 3
-	dr = cr * (speed / 3.6) * 9.81 * mass
-	return pd + dr
+	pr = cr * (speed / 3.6) * 9.81 * mass
+	return pd + pr
 
 
 def calculate_error(cd: float, cr: float, dataset: dict[float, int]) -> float:
@@ -79,11 +79,6 @@ def calculate_error(cd: float, cr: float, dataset: dict[float, int]) -> float:
 		total_error += error
 		denominator += dataset[i] ** 2
 
-		# print(error, data[i] ** 2, denominator)
-		# print(data[i], end="\t")
-		# print(round(calculated_power, 1), end="\t")
-		# print(round(error, 2), end="\t")
-		# print()
 	coef_error = np.sqrt(total_error / denominator)
 	return coef_error
 
@@ -147,12 +142,13 @@ def print_results(results: Results) -> None:
 
 
 def main():
-	alban_tt = calculate_best_coef(jerome_tt_data)
+	print("--- DYNAMIC CR REGRESSIONS ---")
 	print("--- Alban TT ---")
+	alban_tt = calculate_best_coef(alban_tt_data)
 	print_results(alban_tt)
 
 	print("--- Jerome TT ---")
-	jerome_tt = calculate_best_coef(alban_tt_data)
+	jerome_tt = calculate_best_coef(jerome_tt_data)
 	print_results(jerome_tt)
 
 	print("--- Alban RB ---")
@@ -167,12 +163,13 @@ def main():
 	alban_pack = calculate_best_coef(alban_pack_data)
 	print_results(alban_pack)
 
-	# print("--- Optimal cr ---")
-	# datasets = [alban_tt_data, jerome_tt_data, alban_rb_data, jerome_rb_data, alban_pack_data]
-	# results = calculate_best_coef_from_multiple_datasets(datasets)
-	#
-	# for result in results:
-	# 	print_results(result)
+	print("--- STATIC CR REGRESSIONS ---")
+	datasets = [alban_tt_data, jerome_tt_data, alban_rb_data, jerome_rb_data, alban_pack_data]
+	results = calculate_best_coef_from_multiple_datasets(datasets)
+	labels = ["--- Alban TT ---", "--- Jerome TT ---", "--- Alban RB ---", "--- Jerome RB ---", "--- Alban PK ---"]
+	for label, result in zip(labels, results):
+		print(label)
+		print_results(result)
 
 
 if __name__ == '__main__':
