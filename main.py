@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 jerome_tt_data = {
 	38.9: 372,
@@ -101,7 +102,7 @@ def calculate_best_coef(dataset: dict[float, int]) -> Results:
 def calculate_best_coef_from_fixed_cr(dataset: dict[float, int], fixed_cr: float) -> Results:
 	lowest_error = 1e10
 	cd_of_lowest = None
-	for potential_cd in np.arange(0.12, 0.32, 0.0001):
+	for potential_cd in np.arange(0.12, 0.32, 0.001):
 		error = calculate_error(potential_cd, fixed_cr, dataset)
 		if error < lowest_error:
 			lowest_error = error
@@ -115,7 +116,7 @@ def calculate_best_coef_from_multiple_datasets(datasets: list[dict[float, int]])
 	errors_of_lowest = []
 	cds_of_lowest = []
 	cr_of_lowest = None
-	for potential_cr in np.arange(0.005, 0.015, 0.000005):
+	for potential_cr in np.arange(0.005, 0.015, 0.00005):
 		total_error = 0
 		current_errors = []
 		current_cds = []
@@ -142,6 +143,7 @@ def print_results(results: Results) -> None:
 
 
 def main():
+	start_time = time.time()
 	print("--- DYNAMIC CR REGRESSIONS ---")
 	print("--- Alban TT ---")
 	alban_tt = calculate_best_coef(alban_tt_data)
@@ -170,6 +172,8 @@ def main():
 	for label, result in zip(labels, results):
 		print(label)
 		print_results(result)
+
+	print(f"Execution took {round(time.time() - start_time, 2)} seconds")
 
 
 if __name__ == '__main__':
